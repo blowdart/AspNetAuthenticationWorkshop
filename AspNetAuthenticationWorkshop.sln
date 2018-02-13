@@ -3,7 +3,20 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetAuthenticationWorkshop", "AspNetAuthenticationWorkshop\AspNetAuthenticationWorkshop.csproj", "{23B9F361-380E-4B8D-BFD4-A3BEF197E76E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A53F5100-1AE6-4363-A2DB-CF9EDD4AAE6F}"
+	ProjectSection(SolutionItems) = preProject
+		License.txt = License.txt
+		nuget.config = nuget.config
+		readme.md = readme.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_0_Setup", "src\Step0\Step_0_Setup.csproj", "{CFABEF2D-4216-4C42-A3B0-8883E7CECE0A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_1_AddAuthentication", "src\Step1\Step_1_AddAuthentication.csproj", "{86F36F3B-C18C-4274-BABD-33CB4BA374D2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_2_Events_And_Logging", "src\Step2\Step_2_Events_And_Logging.csproj", "{B1AA01F0-FB1E-4195-9903-FB98320C2854}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,13 +24,26 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{23B9F361-380E-4B8D-BFD4-A3BEF197E76E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{23B9F361-380E-4B8D-BFD4-A3BEF197E76E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{23B9F361-380E-4B8D-BFD4-A3BEF197E76E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{23B9F361-380E-4B8D-BFD4-A3BEF197E76E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFABEF2D-4216-4C42-A3B0-8883E7CECE0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFABEF2D-4216-4C42-A3B0-8883E7CECE0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFABEF2D-4216-4C42-A3B0-8883E7CECE0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFABEF2D-4216-4C42-A3B0-8883E7CECE0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86F36F3B-C18C-4274-BABD-33CB4BA374D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86F36F3B-C18C-4274-BABD-33CB4BA374D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86F36F3B-C18C-4274-BABD-33CB4BA374D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86F36F3B-C18C-4274-BABD-33CB4BA374D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1AA01F0-FB1E-4195-9903-FB98320C2854}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1AA01F0-FB1E-4195-9903-FB98320C2854}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1AA01F0-FB1E-4195-9903-FB98320C2854}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1AA01F0-FB1E-4195-9903-FB98320C2854}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CFABEF2D-4216-4C42-A3B0-8883E7CECE0A} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
+		{86F36F3B-C18C-4274-BABD-33CB4BA374D2} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
+		{B1AA01F0-FB1E-4195-9903-FB98320C2854} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19FB8A1A-19BD-4639-B042-B5DD8B8F87D3}
