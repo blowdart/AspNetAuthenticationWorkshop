@@ -37,8 +37,8 @@ namespace authenticationlab
                 .AddCookie()
                 .AddTwitter(options =>
                 {
-                    options.ConsumerKey = "";
-                    options.ConsumerSecret = "";
+                    options.ConsumerKey = "CONSUMER_KEY";
+                    options.ConsumerSecret = "CONSUMER_SECRET";
                     options.Events = new TwitterEvents()
                     {
                         OnRedirectToAuthorizationEndpoint = context =>

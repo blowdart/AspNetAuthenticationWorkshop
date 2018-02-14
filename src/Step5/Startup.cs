@@ -61,8 +61,8 @@ namespace authenticationlab
                 })
                 .AddTwitter(options =>
                 {
-                    options.ConsumerKey = "7eRsQzfm8fMIxmBV3zahlBaH5";
-                    options.ConsumerSecret = "IPE7FxpiWmDmEEaxdjAb9nStm9nI5Q1LZtCUqCHjDDAqk5ISRi";
+                    options.ConsumerKey = "CONSUMER_KEY";
+                    options.ConsumerSecret = "CONSUMER_SECRET";
                     options.Events = new TwitterEvents()
                     {
                         OnRedirectToAuthorizationEndpoint = context =>
@@ -115,8 +115,8 @@ namespace authenticationlab
                 if (accessTokenClaim != null && accessTokenSecretClaim != null)
                 {
                     var userCredentials = Tweetinvi.Auth.CreateCredentials(
-                        "7eRsQzfm8fMIxmBV3zahlBaH5",
-                        "IPE7FxpiWmDmEEaxdjAb9nStm9nI5Q1LZtCUqCHjDDAqk5ISRi",
+                        "CONSUMER_KEY",
+                        "CONSUMER_SECRET",
                         accessTokenClaim.Value,
                         accessTokenSecretClaim.Value);
 
