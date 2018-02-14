@@ -223,7 +223,7 @@ options.Events = new TwitterEvents()
     },
     OnTicketReceived = context =>
     {
-        _logger.LogInformation("Ticket recieved.");
+        _logger.LogInformation("Ticket received.");
         return Task.CompletedTask;
     },
     OnCreatingTicket = context =>
@@ -274,8 +274,10 @@ OnCreatingTicket = context =>
 
 ```c#
 var claimsIdentity = (ClaimsIdentity)context.User.Identity;
-var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
-var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
+var accessTokenClaim = 
+    claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
+var accessTokenSecretClaim = 
+    claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
 
 if (accessTokenClaim != null && accessTokenSecretClaim != null)
 {
@@ -308,8 +310,10 @@ app.Run(async (context) =>
     await context.Response.WriteAsync("<html><body>\r");
 
     var claimsIdentity = (ClaimsIdentity)context.User.Identity;
-    var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
-    var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
+    var accessTokenClaim = 
+        claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
+    var accessTokenSecretClaim = 
+        claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
 
     if (accessTokenClaim != null && accessTokenSecretClaim != null)
     {
@@ -320,10 +324,13 @@ app.Run(async (context) =>
             accessTokenSecretClaim.Value);
 
             var authenticatedUser = Tweetinvi.User.GetAuthenticatedUser(userCredentials);
-            if (authenticatedUser != null && !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
+            if (authenticatedUser != null && 
+                !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
             {
                 await context.Response.WriteAsync(
-                    string.Format("<img src=\"{0}\"></img>", authenticatedUser.ProfileImageUrlHttps));
+                    string.Format(
+                        "<img src=\"{0}\"></img>", 
+                        authenticatedUser.ProfileImageUrlHttps));
             }
     }
 
@@ -449,18 +456,59 @@ public void ConfigureServices(IServiceCollection services)
 Step 5: Claims transformation
 =============================
 
+* Claims transformation allows you to add, delete or even replace the principal that's constructed during `AuthenticateAsync()`.
+* Claims transformation is a service, implementing `IClaimsTransformation`.
+* Let's write one that adds a claim to a resource during authentication, without having to use the authentication specific events.
+
+```c#
+class ClaimsTransformer : IClaimsTransformation
+{
+   public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+   {
+     ((ClaimsIdentity)principal.Identity).AddClaim(
+        new Claim("transformedOn", DateTime.Now.ToString()));
+     return Task.FromResult(principal);
+   }
+}
+```
+
+* Then it gets added in `ConfigureServices()`
+
+```c#
+public void ConfigureServices(IServiceCollection services)
+{
+   // Other service config removed
+
+   services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
+}
+```
+
+* Note that, as discussed, this gets called any time `AuthenticateAsync()` is called, so it would add the "now" claim every time it runs, which is probably not what you want - claims transformers need to be defensive, for example
+
+```c#
+public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+{
+    var claimsIdentity = (ClaimsIdentity)principal.Identity;
+
+    if (claimsIdentity.Claims.FirstOrDefault(x => x.Type == "transformedOn") == null)
+    {
+        ((ClaimsIdentity)principal.Identity).AddClaim(
+            new Claim("transformedOn", System.DateTime.Now.ToString()));
+    }
+
+    return Task.FromResult(principal);
+}
+```
+
+* You can add a line into your `app.Run()` to see the claim; note that it updates on every run, it's not persisted into the cookie, it runs after the cookie has been written.
+
+
 Step 6: MVC and Tag Helpers
 ===========================
 
 CSRF
 
-Step 7: ASP.NET Identity
-========================
-
-Find database that works on linux, ha
-ConfigureApplicationCookie sadness
-
-Step 8: Writing your own authentication provider
+Step 7: Writing your own authentication provider
 ================================================
 
 

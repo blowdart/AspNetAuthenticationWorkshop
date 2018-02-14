@@ -54,7 +54,7 @@ namespace authenticationlab
                         },
                         OnTicketReceived = context =>
                         {
-                            _logger.LogInformation("Ticket recieved.");
+                            _logger.LogInformation("Ticket received.");
                             return Task.CompletedTask;
                         },
                         OnCreatingTicket = context =>

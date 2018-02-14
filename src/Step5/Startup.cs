@@ -91,6 +91,8 @@ namespace authenticationlab
                         }
                     };
                 });
+
+            services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
         }
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
@@ -126,8 +128,30 @@ namespace authenticationlab
                     }
                 }
 
+                var transformDateClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == "transformedOn");
+                if (transformDateClaim != null)
+                {
+                    await context.Response.WriteAsync(
+                        string.Format("<br/>Transformed on {0}.<br />", transformDateClaim.Value));
+                }
+
                 await context.Response.WriteAsync("</body></html>\r");
             });
+        }
+    }
+
+    class ClaimsTransformer : IClaimsTransformation
+    {
+        public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
+        {
+            var claimsIdentity = (ClaimsIdentity)principal.Identity;
+
+            if (claimsIdentity.Claims.FirstOrDefault(x => x.Type == "transformedOn") == null)
+            {
+                ((ClaimsIdentity)principal.Identity).AddClaim(new Claim("transformedOn", System.DateTime.Now.ToString()));
+            }
+
+            return Task.FromResult(principal);
         }
     }
 }
