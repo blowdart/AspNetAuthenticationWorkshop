@@ -25,6 +25,22 @@ namespace authenticationlab
             _logger = loggerFactory.CreateLogger<Startup>();
         }
 
+        private static int RequestCount = 0;
+
+        public static async Task ValidateAsync(CookieValidatePrincipalContext context)
+        {
+            if (context.Request.Path.HasValue && context.Request.Path == "/")
+            {
+                System.Threading.Interlocked.Increment(ref RequestCount);
+            }
+
+            if (RequestCount % 5 == 0)
+            {
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+        }
+
         public void ConfigureServices(IServiceCollection services)
         {
             services
@@ -34,11 +50,19 @@ namespace authenticationlab
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
                 })
-                .AddCookie()
+                .AddCookie(options =>
+                {
+                    options.SlidingExpiration = true;
+                    options.ExpireTimeSpan = new System.TimeSpan(0, 5, 0);
+                    options.Events = new CookieAuthenticationEvents
+                    {
+                        OnValidatePrincipal = Startup.ValidateAsync
+                    };
+                })
                 .AddTwitter(options =>
                 {
-                    options.ConsumerKey = "";
-                    options.ConsumerSecret = "";
+                    options.ConsumerKey = "7eRsQzfm8fMIxmBV3zahlBaH5";
+                    options.ConsumerSecret = "IPE7FxpiWmDmEEaxdjAb9nStm9nI5Q1LZtCUqCHjDDAqk5ISRi";
                     options.Events = new TwitterEvents()
                     {
                         OnRedirectToAuthorizationEndpoint = context =>
@@ -83,15 +107,14 @@ namespace authenticationlab
                 await context.Response.WriteAsync("<html><body>\r");
 
                 var claimsIdentity = (ClaimsIdentity)context.User.Identity;
-
                 var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
                 var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
 
                 if (accessTokenClaim != null && accessTokenSecretClaim != null)
                 {
                     var userCredentials = Tweetinvi.Auth.CreateCredentials(
-                        "",
-                        "",
+                        "7eRsQzfm8fMIxmBV3zahlBaH5",
+                        "IPE7FxpiWmDmEEaxdjAb9nStm9nI5Q1LZtCUqCHjDDAqk5ISRi",
                         accessTokenClaim.Value,
                         accessTokenSecretClaim.Value);
 

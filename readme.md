@@ -2,7 +2,7 @@
 
 https://github.com/dotnet-presentations
 
-This is walk through for an ASP.NET Core Authentication Lab, targetted against ASP.NET Core 2.0 RTM and VS2017/VS Cde.
+This is walk through for an ASP.NET Core Authentication Lab, targeted against ASP.NET Core 2.0 RTM and VS2017/VS Code.
 
 This lab uses the Model-View-Controller template as that's what everyone has been using up until now and it's the most familiar starting point for the vast majority of people.
 
@@ -205,7 +205,7 @@ Step 2: Authentication Events and Logging
         }
 ```
 
-* Now let's look at the events on the Twitter authenication service.
+* Now let's look at the events on the Twitter authentication service.
 * Add some logging inside the events class
 
 ```c#
@@ -234,8 +234,8 @@ options.Events = new TwitterEvents()
 };
 ```
 
-* Make sure your authentication cookie is deleted (close your browser, or manually cull it) then browse to the app again and watch the logging in the console.
-* Did you notice any difference? Why isn't your username greeting you any more?
+* Make sure your authentication cookie is deleted (close your browser, or manually cull it) then browse to the web site again and watch the logging in the console.
+* Did you notice any difference? Why isn't your user name greeting you any more?
 * Some events need things returned. Look at the documentation for the events, or the [source](https://github.com/aspnet/Security/blob/dev/src/Microsoft.AspNetCore.Authentication.Twitter/Events/TwitterEvents.cs).
 * Note that the `OnRedirectToAuthorizationEndpoint` default implementation calls the redirect - this isn't happening in your code any more, so add it back;
 
@@ -270,7 +270,7 @@ OnCreatingTicket = context =>
 }
 ```
 
-* And finally to check they persisted add some code inside the `app.Run()` lamda after the greeting;
+* And finally to check they persisted add some code inside the `app.Run()` lambda after the greeting;
 
 ```c#
 var claimsIdentity = (ClaimsIdentity)context.User.Identity;
@@ -283,10 +283,9 @@ if (accessTokenClaim != null && accessTokenSecretClaim != null)
 }
 ```
 
-* Make sure your cookies have been cleared, run the app and browse to it.
+* Make sure your cookies have been cleared, run the application and browse to it.
 * How safe is this? Can you figure out from the cookie what the access token details are?
-* Let's do something interesting with these tokens. 
-* The [TweetinviAPI](https://github.com/linvi/tweetinvi) library provides a nice wrapper around the Twitter API. 
+* Let's do something interesting with these tokens, the [TweetinviAPI](https://github.com/linvi/tweetinvi) library provides a nice wrapper around the Twitter API. 
 * Open up your project file and add a project reference to it under the existing reference for `Microsoft.AspNet.Core.All`.
 
 ```xml
@@ -294,8 +293,8 @@ if (accessTokenClaim != null && accessTokenSecretClaim != null)
 ```
 
 * Remember if you're not using VS you will need to run `dotnet restore` at the command line.
-* Now let's use the TweetSharp library to grab the profile image for the authenticated user. 
-* Replace the `app.Run()` lamda with the following;
+* Now let's use the TweetinviAPI library to grab the profile image for the authenticated user. 
+* Replace the `app.Run()` lambda with the following;
 
 ```c#
 app.Run(async (context) =>
@@ -333,12 +332,119 @@ app.Run(async (context) =>
 ```
 * Rerun the application and look at how wonderful your Twitter profile image is.
 
-Step 4: Cookie Authentication
-=============================
+Step 3: Schemes, Verbs
+======================
 
-* What's the expiry on the issued cookie?
-* How are cookies protected?
-* Discuss data protection
+* How is this all hanging together? 
+  * Why does Twitter authentication need cookie authentication too? 
+  * What's a scheme?
+
+* Remote authentication is just that. Remote. There is no persistence mechanism to allow it to be reused.
+* Persistent authentication is authentication whose information is sent with every request, like Basic authentication, Digest authentication, Certificate authentication or cookie based tokens.
+* Examine the authentication configuration in `ConfigureServices()`
+
+```c#
+services
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
+    })
+```
+* There are multiple `Default*` options on the `AuthenticationService` configuration;
+  * DefaultAuthenticateScheme
+  * DefaultChallengeScheme
+  * DefaultForbidScheme
+  * DefaultScheme
+  * DefaultSignInScheme
+  * DefaultSignOutScheme
+* When you have multiple authentication types you use these configuration settings to decide which authentication type is responsible for what
+* Everything is based off a scheme. A scheme is simply a string you give an authentication provider when you configure it.
+  * `DefaultScheme` is, well, the default. It provides every event handler, unless you override the other events.
+  * `AuthenticationScheme` is the provider that runs on every request and attempts to construction an identity from information in the request.
+  * `ChallengeScheme` is the provider that will handle challenges, the event that happens when authorization is required and there's no identity on the request.
+  * `ForbidScheme` is the provider that handles forbid events, which fire when authorization happens and the current identity fails the authorization check.
+  * `DefaultSignInScheme` and `DefaultSignOutScheme` indicate the provider which will handle `SignIn` and `SignOut` calls.
+* So what does the configuration in your application do? Could it be different?
+
+
+Step 4: Configuring Cookie Authentication
+=========================================
+
+* Fire up your browser and look at the asp.net cookie that's been issued, '.AspNetCore.Cookies'
+* What does the cookie contain?
+* What's the expiry on the cookie?
+* How do you think the cookie is protected?
+
+* Let's configure that cookie; first let's set a permanent expiry date on it so it persist over browser closes
+
+```c#
+.AddCookie(options =>
+{
+    options.Cookie.Expiration = new System.TimeSpan(0, 15, 0);
+})
+```
+
+* What other options are in the cookie builder? Why is expiration also on Options? (it's going away)
+* What about sliding expiration? Sliding expiration is outside of the cookie builder; note we need to remove the expiration timespan from the cookie builder
+```c#
+.AddCookie(options =>
+{
+    options.ExpireTimeSpan = new System.TimeSpan(0, 15, 0);
+    options.SlidingExpiration = true;
+})
+```
+* Why can't I set the expiration in the cookie builder in options? (The cookie authentication service has its own setting to support sliding expirations and also to embed the expiry in the cookie value itself. Why would it embed it in the value?)
+* After changing the cookie from a session cookie to a persistent one you'll now notice that you don't bounce through Twitter authentication again, cookie authentication is the single source of truth.
+So what would happen if you populated a cookie from a database and the values change? For this we have the `OnValidatePrincipal` event.
+* Create a validator in your startup.cs
+```c#
+private static int RequestCount = 0;
+
+public static async Task ValidateAsync(CookieValidatePrincipalContext context)
+{
+    if (context.Request.Path.HasValue && context.Request.Path == "/")
+    {
+        System.Threading.Interlocked.Increment(ref RequestCount);
+    }
+
+    if (RequestCount % 5 == 0)
+    {
+        context.RejectPrincipal();
+        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    }
+}
+```
+* Every 5 requests to / will now reject the current principal and trigger sign out.  If you just wanted to change the principal you could use
+```
+    context.ReplacePrincipal(newPrincipal);
+    context.ShouldRenew = true;
+```
+
+* Now let's talk about how cookies are protected, because that value is not plain text.
+* ASP.NET Core has a [Data Protection](https://docs.microsoft.com/en-us/aspnet/core/security/data-protection/) service which creates and rotates keys used throughout the stack.
+* Data Protection has two concepts, key persistence and key protection.
+
+```c#
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(@"\\server\share\directory\"))
+        .ProtectKeysWithCertificate("thumbprint");
+}
+```
+* In some environments we can figure out what to do automatically. Check your startup logs to see what we're trying to do.
+* Linux and MacOS need specific choices.
+* Applications get isolation by default, to share cookies share a keyring and set a static application name
+
+```c#
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddDataProtection()
+        .SetApplicationName("shared app name");
+}
+```
 
 Step 5: Claims transformation
 =============================
@@ -350,6 +456,9 @@ CSRF
 
 Step 7: ASP.NET Identity
 ========================
+
+Find database that works on linux, ha
+ConfigureApplicationCookie sadness
 
 Step 8: Writing your own authentication provider
 ================================================
