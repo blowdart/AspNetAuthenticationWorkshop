@@ -24,6 +24,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_5_Claims_Transformatio
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_6_Adding_Mvc", "src\Step6\Step_6_Adding_Mvc.csproj", "{B8B220AF-1104-48BA-842D-96C709390530}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_7_Custom_Authentication", "src\Step7\Step_7_Custom_Authentication.csproj", "{500E4364-0B89-418D-9CCF-3B9A42FF884E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +56,10 @@ Global
 		{B8B220AF-1104-48BA-842D-96C709390530}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8B220AF-1104-48BA-842D-96C709390530}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8B220AF-1104-48BA-842D-96C709390530}.Release|Any CPU.Build.0 = Release|Any CPU
+		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -65,6 +71,7 @@ Global
 		{B4C90260-E715-4FDA-9649-63D3D11AE2CB} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 		{936302C5-5E51-479D-B43C-73593CCAAC8B} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 		{B8B220AF-1104-48BA-842D-96C709390530} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
+		{500E4364-0B89-418D-9CCF-3B9A42FF884E} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19FB8A1A-19BD-4639-B042-B5DD8B8F87D3}

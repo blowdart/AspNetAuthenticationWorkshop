@@ -703,7 +703,290 @@ namespace authenticationlab.Controllers
 ```
 * Recompile your application, run it, and browse to it and there's your twitter profile picture back again.
 
-Step 7: Writing your own authentication provider
-================================================
+Step 7: Writing your own authentication handler
+===============================================
+
+* Finally for this workshop what if you have a weird authentication protocol? 
+Tokens in a weird format in a random header, [Basic Authentication](https://github.com/blowdart/idunno.Authentication), 
+something ASP.NET Core doesn't cater for? Well you need to write an authentication handler.
+* As this is a workshop we need a simple example, one that you would never, ever, ever write in real life,
+one that stands alone, and doesn't use encryption or signing or anything useful you would use. 
+So, let's put authentication information in the query string and, well, *let's never admit we did this to anyone*.
+* Let's start by resetting our authentication pieces in the application we've been working on
+* In `startup.cs` remove add the `.AddAuthentication()` call and the handlers hanging off it. 
+* Remove the ClaimsTransformation service registration, and the cookie validator as well.
+* Your `startup.cs` should now look like
+
+```c#
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace authenticationlab
+{
+    public class Startup
+    {
+        private ILogger _logger;
+
+        public Startup(ILoggerFactory loggerFactory)
+        {
+            _logger = loggerFactory.CreateLogger<Startup>();
+        }
 
 
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddMvc();
+        }
+
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseExceptionHandler("/Home/Error");
+            }
+
+            app.UseAuthentication();
+
+            app.UseMvc(routes =>
+            {
+                routes.MapRoute(
+                    name: "default",
+                    template: "{controller=Home}/{action=Index}/{id?}");
+            });
+        }
+    }
+}
+```
+
+* Next take out all the calls to retrieve the twitter profile in your controller, 
+and reset it to just returning a view.
+
+```c#
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace authenticationlab.Controllers
+{
+    public class HomeController : Controller
+    {
+        [Authorize]
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+```
+
+* Remove the code that displayed the picture from the view,
+
+```c#
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ASP.NET MVC</title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <p>
+        Hello @User.Identity.Name
+    </p>
+</body>
+</html>
+```
+
+* If you want you can also delete the model class.
+* Now if you run the application the `[Authorize]` attribute will cause an error,
+`InvalidOperationException: No authenticationScheme was specified, and there was no DefaultChallengeScheme found.`
+because there is no authentication handlers in the pipeline. So let's write one.
+
+* At its simplest an authentication handler is an implementation of `AuthenticationHandler`, 
+an associated options class and, if you're feeling helpful an events class, 
+a helper to support `app.Add*` and a default class to hold a scheme name.
+
+* Let's start with the handler itself. Add a new file, `AwfulQueryStringAuthenticationHandler.cs` to your project.
+* Make the class inherit from `AuthenticationHandler`. but, this needs an options class. 
+* As we're not going to implement options let's just use the base class `AuthenticationSchemeOptions`.
+* A handler needs to implement `HandleAuthenticateAsync()`, so we can put in a default implementation;
+
+```c#
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+
+namespace authenticationlab
+{
+    public class AwfulQueryStringAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+    {
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
+
+```
+* We still can't compile at this point, as we need some bits for DI handlers rely on. 
+Add the following constructor to the class;
+
+```c#
+public AwfulQueryStringAuthenticationHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder,
+    ISystemClock clock) : base(options, logger, encoder, clock)
+{
+}
+```
+
+* After you've added the using references your class should look like
+
+```c#
+using System;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace authenticationlab
+{
+    public class AwfulQueryStringAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+    {
+        public AwfulQueryStringHandler(
+            IOptionsMonitor<AuthenticationSchemeOptions> options,
+            ILoggerFactory logger,
+            UrlEncoder encoder,
+            ISystemClock clock) : base(options, logger, encoder, clock)
+        {
+        }
+
+        protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
+```
+
+* Remember schemes, and how you have constants for the default scheme for each handler? 
+Let's create that now. Add a new file, `AwfulQueryStringAuthenticationDefaults.cs`
+and add the following code
+
+```c#
+namespace authenticationlab
+{
+    public static class AwfulQueryStringAuthenticationDefaults
+    {
+        public const string AuthenticationScheme = "Awful";
+    }
+}
+```
+
+* Finally we want to add that nice `services.AddX()` support. 
+This is provided by extension methods on `AuthenticationBuilder`.
+Create a new file called `AwfulQueryStringAuthenticationExtensions.cs` 
+and put the following code into it.
+
+```c#
+using System;
+using Microsoft.AspNetCore.Authentication;
+
+using authenticationlab;
+
+
+namespace Microsoft.AspNetCore.Builder
+{
+    public static class AwfulQueryStringAuthenticationAppBuilderExtensions
+    {
+        public static AuthenticationBuilder AddAwfulQueryString(
+            this AuthenticationBuilder builder)
+            => builder.AddAwfulQueryString(
+                AwfulQueryStringAuthenticationDefaults.AuthenticationScheme);
+
+        public static AuthenticationBuilder AddAwfulQueryString(
+            this AuthenticationBuilder builder, 
+            string authenticationScheme)
+            => builder.AddAwfulQueryString(
+                authenticationScheme, 
+                configureOptions: null);
+
+        public static AuthenticationBuilder AddAwfulQueryString(
+            this AuthenticationBuilder builder, 
+            Action<AuthenticationSchemeOptions> configureOptions)
+            => builder.AddAwfulQueryString(
+                AwfulQueryStringAuthenticationDefaults.AuthenticationScheme, 
+                configureOptions);
+
+        public static AuthenticationBuilder AddAwfulQueryString(
+            this AuthenticationBuilder builder,
+            string authenticationScheme,
+            Action<AuthenticationSchemeOptions> configureOptions)
+        {
+            return builder.AddScheme<
+                AuthenticationSchemeOptions, 
+                AwfulQueryStringAuthenticationHandler>(
+                    authenticationScheme, 
+                    configureOptions);
+        }
+    }
+}
+```
+* Note the `namespace` for this class is `Microsoft.AspNetCore.Builder` which will allow it to appear in `ConfigureServices()`.
+* Now we have everything together and compiling we can add our new handler to `ConfigureServices()`;
+
+```c#
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddAuthentication(AwfulQueryStringAuthenticationDefaults.AuthenticationScheme)
+        .AddAwfulQueryString();
+
+    services.AddMvc();
+}
+```
+* If you now run your application and browse to the web page you will see your handler gets called, and throws the `NotImplementedException`.
+
+* So, let's add an implementation.
+
+```c#
+protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
+{
+    string usernameParameter = Request.Query["username"];
+
+    if (!string.IsNullOrEmpty(usernameParameter))
+    {
+        var identity = new ClaimsIdentity(Scheme.Name);
+        identity.AddClaim(
+            new Claim(
+                ClaimTypes.Name,
+                usernameParameter,
+                ClaimValueTypes.String,
+                Options.ClaimsIssuer));
+        var principal = new ClaimsPrincipal(identity);
+
+        var ticket = new AuthenticationTicket(principal, Scheme.Name);
+        return AuthenticateResult.Success(ticket);
+    }
+
+    return AuthenticateResult.NoResult();
+}
+```
+
+* Run your code and browse to the site. 
+You'll see that there's nothing being rendered when you visit the home page.
+Open your browser tooling and turn on network capture and refresh - 
+you're getting a 401 back because there's no `username` query string parameter and there 
+are no other handlers which could construct an identity.
+* Try adding a `username` parameter to the query string, with a value. and browse.
+* You have an authenticated user. Let's never talk of this again
+
+* *If you wanted to map status codes to error messages there is a built in middleware for that,
+just add `app.UseStatusCodePages();` into your app configuration.*
+
+Now why not look at the [Authorization Workshop](https://github.com/blowdart/AspNetAuthorizationWorkshop/tree/core2)?
