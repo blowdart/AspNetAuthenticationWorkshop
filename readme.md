@@ -2,7 +2,7 @@
 
 https://github.com/dotnet-presentations
 
-This is walk through for an ASP.NET Core Authentication Lab, targeted against ASP.NET Core 2.0 RTM and VS2017/VS Code.
+This is walk through for a ASP.NET Core Authentication Lab, targeted against ASP.NET Core 2.0 RTM and VS2017/VS Code.
 
 This lab uses the Model-View-Controller template as that's what everyone has been using up until now and it's the most familiar starting point for the vast majority of people.
 
