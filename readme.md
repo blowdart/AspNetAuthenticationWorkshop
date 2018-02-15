@@ -506,7 +506,202 @@ public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
 Step 6: MVC and Tag Helpers
 ===========================
 
-CSRF
+* So obviously putting your entire website logic inside the `app.Run()` lambda isn't really a sustainable development strategy, so let's add ASP.NET MVC to the mix.
+* First at the end of `ConfigureServices()` add a call to `services.AddMvc();`
+* Next let's add developer error pages, and MVC into the application configuration, replace the `Configure()` method with the following;
+```c#
+public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+{
+    if (env.IsDevelopment())
+    {
+        app.UseDeveloperExceptionPage();
+    }
+    else
+    {
+        app.UseExceptionHandler("/Home/Error");
+    }
+
+    app.UseAuthentication();
+
+    app.UseMvc(routes =>
+    {
+        routes.MapRoute(
+            name: "default",
+            template: "{controller=Home}/{action=Index}/{id?}");
+        });
+    }
+}
+```
+* Now we need to add a controller. Create a `Controllers` folder and inside the new folder create a new file `HomeController.cs`.
+Put the following code in the file.
+```c#
+using Microsoft.AspNetCore.Mvc;
+
+namespace authenticationlab.Controllers
+{
+    public class HomeController : Controller
+    {
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+```
+* Next we need to add a view. Create a `Views` folder in your application folder, then create a `Home` folder inside the `Views` folder.
+* Inside this new `Home` folder create a file called `Index.cshtml` and change the contents to be
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ASP.NET MVC</title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <p>
+        Hello world!
+    </p>
+</body>
+</html>
+```
+* Finally edit your `csproj` file. (If you're using Visual Studio you can right click on the project in the solution folder and choose `Edit` from the context menu).
+* Change the `SDK` property on the `Project` element from `Microsoft.NET.Sdk` to `Microsoft.NET.Sdk.Web`.
+* In the `Views` folder create a `_ViewImports.cshtml` file and replace any contents with the following;
+
+```
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+```
+
+* Finally clean your project by executing `dotnet clean` in the project directory, or by using Visual Studio's `Clean` context menu item on the project file.
+
+* *Note if you're using Visual Studio you will notice it now tries to be clever and hooks up IIS Express to host your application, 
+as well as assigning random ports. This can be controlled via the `launchsettings.json` file it created. 
+Change the `applicationURL` property in the authenticationLab profile to be `http://localhost:5000/` and delete the `IIS Express` profile.*
+
+* Run your project and browse to the site and you should see `Hello World`.
+* Now, let's get back to where we were, first let's see who the current user is. Open up `Index.cshtml` and replace `Hello World` with `Hello @User.Identity.Name`. Build and run your application and browse to it. This time you will only see `Hello `. Why?
+* We need to add the authentication process back to the application. 
+* Open your `HomeController.cs` file and add an `[Authorize]` attribute to the Index action. You will also need to add a `using` statement for `Microsoft.AspNetCore.Authorization`. Your controller should look like this
+
+```c#
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace authenticationlab.Controllers
+{
+    public class HomeController : Controller
+    {
+        [Authorize]
+        public IActionResult Index()
+        {
+            return View();
+        }
+    }
+}
+```
+
+* Rebuild and rerun your application.
+* The addition of the `[Authorize]` attribute tells MVC that all requests to the action need to be authorized. 
+The default authorization rule is any authenticated user, 
+in fact any authorization rule requires an authenticated user so before authorization can happen authentication must take place,
+so it's now doing what we manually previous in these lines of code
+
+```c#
+if (!context.User.Identity.IsAuthenticated)
+{
+    await context.ChallengeAsync();
+}
+```
+* One thing to note is that any output into a view is HTML attribute encoded by default, 
+so even if we got a user name which had `&lt;script&gt;` in it, it's going to end up as 
+`&amp;lt;script&amp;gt;` in the view output. 
+
+* If we wanted to get out pretty twitter profile picture back again we could go and grab it in the controller,
+shove it in a model, and pass it into the view. So let's do that.
+* Create a `Models` folder in the root of your project and inside the folder create a new file, `IndexViewModel.cs`. Paste the following code into the file
+
+```c#
+namespace authenticationlab.Models
+{
+    public class IndexViewModel
+    {
+        public string ProfilePictureUri { get; set; }
+    }
+}
+```
+
+* Edit the `Index` action in the `HomeController` to create an instance of the model, 
+and assign the profile Uri to the property on the model using the code that you had in `app.Run()`. 
+Note that inside on the `Controller` base class are a number of properties, including `User` so you don't need to go looking for the request context.
+Your controller code should look some this;
+
+```c#
+using System.Linq;
+using System.Security.Claims;
+
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace authenticationlab.Controllers
+{
+    public class HomeController : Controller
+    {
+        [Authorize]
+        public IActionResult Index()
+        {
+            var model = new Models.IndexViewModel();
+
+            var claimsIdentity = (ClaimsIdentity)User.Identity;
+
+            var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == Startup.AccessTokenClaim);
+            var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == Startup.AccessTokenSecret);
+
+            if (accessTokenClaim != null && accessTokenSecretClaim != null)
+            {
+                var userCredentials = Tweetinvi.Auth.CreateCredentials(
+                    "CONSUMER_KEY",
+                    "CONSUMER_SECRET",
+                    accessTokenClaim.Value,
+                    accessTokenSecretClaim.Value);
+
+                var authenticatedUser = Tweetinvi.User.GetAuthenticatedUser(userCredentials);
+                if (authenticatedUser != null && !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
+                {
+                    model.ProfilePictureUri = authenticatedUser.ProfileImageUrlHttps;
+                }
+            }
+
+            return View(model);
+        }
+    }
+}
+```
+* You'll also need to change the scope for the `AccessTokenClaim` and `AccessTokenSecret` 
+* constants in `startup.cs` from `private` to `public`, or you can cut and paste the strings.
+* Finally go to your view and change it to take in a model and use the contents within it;
+
+```html
+@model authenticationlab.Models.IndexViewModel;
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ASP.NET MVC</title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <p>
+        Hello @User.Identity.Name
+    </p>
+    @if (!string.IsNullOrEmpty(Model.ProfilePictureUri))
+    {
+    <p>
+        <img src="@Model.ProfilePictureUri" />
+    </p>
+    }
+</body>
+</html>
+```
+* Recompile your application, run it, and browse to it and there's your twitter profile picture back again.
 
 Step 7: Writing your own authentication provider
 ================================================

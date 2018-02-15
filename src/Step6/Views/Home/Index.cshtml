@@ -1,0 +1,19 @@
+﻿@model authenticationlab.Models.IndexViewModel;
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ASP.NET MVC</title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <p>
+        Hello @User.Identity.Name
+    </p>
+    @if (!string.IsNullOrEmpty(Model.ProfilePictureUri))
+    {
+    <p>
+        <img src="@Model.ProfilePictureUri" />
+    </p>
+    }
+</body>
+</html>
