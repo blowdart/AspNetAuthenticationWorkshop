@@ -989,4 +989,11 @@ are no other handlers which could construct an identity.
 * *If you wanted to map status codes to error messages there is a built in middleware for that,
 just add `app.UseStatusCodePages();` into your app configuration.*
 
+Step 8: Bonus round - Events
+============================
+
+The [inbox authorization handlers](https://github.com/aspnet/security/) have events in them. Add an event to your query string handler which allows the handler
+to pass the inbound user name somewhere else for validation, and then allows or forbids the request based on the results
+of that call.
+
 Now why not look at the [Authorization Workshop](https://github.com/blowdart/AspNetAuthorizationWorkshop/tree/core2)?

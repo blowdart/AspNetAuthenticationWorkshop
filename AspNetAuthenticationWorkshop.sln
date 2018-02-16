@@ -26,6 +26,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_6_Adding_Mvc", "src\St
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_7_Custom_Authentication", "src\Step7\Step_7_Custom_Authentication.csproj", "{500E4364-0B89-418D-9CCF-3B9A42FF884E}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Step_8_FinishedSample", "src\Step8\Step_8_FinishedSample.csproj", "{4319A178-C859-46BA-A2C4-3448814B49D4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,6 +62,10 @@ Global
 		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{500E4364-0B89-418D-9CCF-3B9A42FF884E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4319A178-C859-46BA-A2C4-3448814B49D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4319A178-C859-46BA-A2C4-3448814B49D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4319A178-C859-46BA-A2C4-3448814B49D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4319A178-C859-46BA-A2C4-3448814B49D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -72,6 +78,7 @@ Global
 		{936302C5-5E51-479D-B43C-73593CCAAC8B} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 		{B8B220AF-1104-48BA-842D-96C709390530} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 		{500E4364-0B89-418D-9CCF-3B9A42FF884E} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
+		{4319A178-C859-46BA-A2C4-3448814B49D4} = {1D1930FB-ECC1-4B46-9FFF-B475EB6CFE57}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19FB8A1A-19BD-4639-B042-B5DD8B8F87D3}
