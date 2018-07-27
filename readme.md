@@ -122,14 +122,14 @@ namespace authenticationlab
 
 * Build the application using your IDE `dotnet build`
 * Run the application using your IDE or using `dotnet run`
-* Open a browser and browser to http://localhost:5000/
+* Open a browser and browser to http://localtest.me:5000/
 * Marvel at seeing Hello World!
 * Congratulations you have a web application in .NET Core.
 
 Step 1: Setup authentication
 ============================
 
-* Navigate to https://apps.twitter.com/ and sign in. If you don't already have a Twitter account, use the Sign up now link to create one. Create a new application, with a callback address of 	http://localhost:5000/signin-twitter
+* Navigate to https://apps.twitter.com/ and sign in. If you don't already have a Twitter account, use the Sign up now link to create one. Create a new application, with a callback address of 	http://localtest.me:5000/signin-twitter
 * Make a note of your API Key and API secret from the Keys and Access Tokens tab.
 * Replace `startup.cs` with the following code, putting your application Consumer Key and Secret in the options properties.
 
@@ -576,7 +576,7 @@ namespace authenticationlab.Controllers
 
 * *Note if you're using Visual Studio you will notice it now tries to be clever and hooks up IIS Express to host your application, 
 as well as assigning random ports. This can be controlled via the `launchsettings.json` file it created. 
-Change the `applicationURL` property in the authenticationLab profile to be `http://localhost:5000/` and delete the `IIS Express` profile.*
+Change the `applicationURL` property in the authenticationLab profile to be `http://localtest.me:5000/` and delete the `IIS Express` profile.*
 
 * Run your project and browse to the site and you should see `Hello World`.
 * Now, let's get back to where we were, first let's see who the current user is. Open up `Index.cshtml` and replace `Hello World` with `Hello @User.Identity.Name`. Build and run your application and browse to it. This time you will only see `Hello `. Why?
