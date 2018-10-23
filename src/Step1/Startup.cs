@@ -1,6 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Twitter;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -17,18 +21,20 @@ namespace authenticationlab
                 {
                     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
                 })
                 .AddCookie()
-                .AddTwitter(options =>
+                .AddGoogle(options =>
                 {
-                    options.ConsumerKey = "";
-                    options.ConsumerSecret = "";
+                    options.ClientId = "**CLIENT ID**";
+                    options.ClientSecret = "**CLIENT SECRET**";
                 });
         }
 
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseHttpsRedirection();
             app.UseAuthentication();
             app.Run(async (context) =>
             {
@@ -36,8 +42,10 @@ namespace authenticationlab
                 {
                     await context.ChallengeAsync();
                 }
-                await context.Response.WriteAsync("Hello "+context.User.Identity.Name+"!\r");
+                context.Response.Headers.Add("Content-Type", "text/plain");
+                await context.Response.WriteAsync("Hello " + context.User.Identity.Name + "!\r");
             });
+
         }
     }
 }

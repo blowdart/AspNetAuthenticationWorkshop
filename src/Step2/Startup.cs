@@ -1,22 +1,24 @@
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Twitter;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace authenticationlab
 {
     public class Startup
     {
-        private const string AccessTokenClaim = "urn:tokens:twitter:accesstoken";
-        private const string AccessTokenSecret = "urn:tokens:twitter:accesstokensecret";
+        private const string AccessTokenClaim = "urn:tokens:google:accesstoken";
 
         private ILogger _logger;
 
@@ -32,14 +34,14 @@ namespace authenticationlab
                 {
                     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
                 })
                 .AddCookie()
-                .AddTwitter(options =>
+                .AddGoogle(options =>
                 {
-                    options.ConsumerKey = "CONSUMER_KEY";
-                    options.ConsumerSecret = "CONSUMER_SECRET";
-                    options.Events = new TwitterEvents()
+                    options.ClientId = "**CLIENT ID**";
+                    options.ClientSecret = "**CLIENT SECRET**";
+                    options.Events = new OAuthEvents
                     {
                         OnRedirectToAuthorizationEndpoint = context =>
                         {
@@ -62,7 +64,7 @@ namespace authenticationlab
                             _logger.LogInformation("Creating tickets.");
                             var identity = (ClaimsIdentity)context.Principal.Identity;
                             identity.AddClaim(new Claim(AccessTokenClaim, context.AccessToken));
-                            identity.AddClaim(new Claim(AccessTokenSecret, context.AccessTokenSecret));
+
                             return Task.CompletedTask;
                         }
                     };
@@ -71,6 +73,7 @@ namespace authenticationlab
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseHttpsRedirection();
             app.UseAuthentication();
             app.Run(async (context) =>
             {
@@ -83,26 +86,24 @@ namespace authenticationlab
                 await context.Response.WriteAsync("<html><body>\r");
 
                 var claimsIdentity = (ClaimsIdentity)context.User.Identity;
+                var nameIdentifier = claimsIdentity.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier).Value;
+                var googleApiKey = "**API KEY**";
 
-                var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
-                var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
-
-                if (accessTokenClaim != null && accessTokenSecretClaim != null)
+                if (!string.IsNullOrEmpty(nameIdentifier))
                 {
-                    var userCredentials = Tweetinvi.Auth.CreateCredentials(
-                        "",
-                        "",
-                        accessTokenClaim.Value,
-                        accessTokenSecretClaim.Value);
-
-                    var authenticatedUser = Tweetinvi.User.GetAuthenticatedUser(userCredentials);
-                    if (authenticatedUser != null && !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
+                    var jsonUrl = $"https://www.googleapis.com/plus/v1/people/{nameIdentifier}?fields=image&key={googleApiKey}";
+                    using (var httpClient = new HttpClient())
                     {
-                        await context.Response.WriteAsync(
-                            string.Format("<img src=\"{0}\"></img>", authenticatedUser.ProfileImageUrlHttps));
+                        var s = await httpClient.GetStringAsync(jsonUrl);
+                        dynamic deserializeObject = JsonConvert.DeserializeObject(s);
+                        var thumbnailUrl = (string)deserializeObject.image.url;
+                        if (thumbnailUrl != null && !string.IsNullOrWhiteSpace(thumbnailUrl))
+                        {
+                            await context.Response.WriteAsync(
+                                string.Format($"<img src=\"{thumbnailUrl}\"></img>"));
+                        }
                     }
                 }
-
                 await context.Response.WriteAsync("</body></html>\r");
             });
         }

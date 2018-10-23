@@ -2,7 +2,7 @@
 
 https://github.com/dotnet-presentations
 
-This is walk through for a ASP.NET Core Authentication Lab, targeted against ASP.NET Core 2.0 RTM and VS2017/VS Code.
+This is walk through for a ASP.NET Core Authentication Lab, targeted against ASP.NET Core 2.1 and VS2017/VS Code.
 
 This lab uses the Model-View-Controller template as that's what everyone has been using up until now and it's the most familiar starting point for the vast majority of people.
 
@@ -17,7 +17,7 @@ Prerequisites
 =============
 * [Visual Studio 2017](https://www.visualstudio.com/) (Community edition is free) or
 * [Visual Studio Code](https://www.visualstudio.com/) (Code is free) and
-* [.NET Core 2.0 SDK](https://www.microsoft.com/net/download/).
+* [.NET Core 2.1 SDK](https://www.microsoft.com/net/download/).
 
 Create a new, blank, project.
 -----------------------------
@@ -46,7 +46,7 @@ First let's add ASP.NET Core to the application.
 
 ``` xml
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.1" />
   </ItemGroup>
 ```
 
@@ -57,11 +57,11 @@ First let's add ASP.NET Core to the application.
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.All" Version="2.1" />
   </ItemGroup>
 
 </Project>
@@ -70,7 +70,6 @@ First let's add ASP.NET Core to the application.
 * Save the `csproj` file. If you're using Visual Studio or VS Code you may be prompted to restore packages, choose yes. If you're using the command line and an editor that makes you reconsider your life choices like VIM enter `dotnet restore` at the command line. No, I can't help you exit VIM.
 * Now switch your editor to the `program.cs` file. Change the contents of this file to be as follows
 
-```c#
 using System;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -79,20 +78,21 @@ namespace authenticationlab
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            BuildWebHost(args).Run();
+            CreateWebHostBuilder(args).Build().Run();
         }
 
-        public static IWebHost BuildWebHost(string[] args) =>
+        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
-                .UseStartup<Startup>()
-                .Build();
+                .UseStartup<Startup>();
     }
 }
+
 ```
 
-* Note that `.UseStartup<Startup>()` is having a bad time, it's looking for a class called startup. So let's add that, create a new file called `startup.cs` and paste the following into it
+* Note that `.UseStartup<Startup>()` is having a bad time, it's looking for a class called 
+`startup`. So let's add that; create a new file called `startup.cs` and paste the following into it
 
 ```c#
 using System;
@@ -129,14 +129,33 @@ namespace authenticationlab
 Step 1: Setup authentication
 ============================
 
-* Navigate to https://apps.twitter.com/ and sign in. If you don't already have a Twitter account, use the Sign up now link to create one. Create a new application, with a callback address of 	http://localhost:5000/signin-twitter
-* Make a note of your API Key and API secret from the Keys and Access Tokens tab.
-* Replace `startup.cs` with the following code, putting your application Consumer Key and Secret in the options properties.
+For this lab we're going to setup an app which uses Google for login.
+
+First we need to configure HTTPS. 
+
+* Check if you have a developer certificate run `dotnet dev-certs https -c -v` in your command line. If you have a certificate you will see "A valid certificate was found." 
+* If no certificate was fund run `dotnet dev-certs https --trust`. You will see a popup from Windows asking you if you want to trust a certificate for `localhost`. Click yes and you will now have a certificate. If you're on Linux trust will not work at certificate generation time, you'll have to trust it in  whatever browser you use. If you're using Firefox you will also have to trust it in the browser as Firefox  does not honour the OS certificate settings.
+* Run your application again, but this time browser to https://localhost:5001 and you should be able to connect over HTTPS.
+* You can force HTTP connections up to HTTPS by adding `app.UseHttpsRedirection();` at the start of your `Configure()` method.
+
+* Next we will create an app with Google to support [Google sign in](https://developers.google.com/identity/sign-in/web/sign-in#before_you_begin)
+
+* Navigate to https://developers.google.com/identity/sign-in/web/sign-in and click the `Configure A Project` button. Create a new project called CoreAuthenticationLab.
+* At the Configure your OAuth client dialog select `Web Server` from the `Where are you calling from?` drop down and enter https://localhost:5001/signin-google as the authorized redirect URI.
+* Click `Create`.
+* Make a note of your Client ID and Client secret from the resulting screen then click the API Console link.
+* Click the `Enable APIs and services` button and in the search box enter `Google+ API` then select it. Click `Enable`.
+* Navigate to https://console.developers.google.com/apis/dashboard and in the drop down at the top of the screen choose your  
+* Return to your code and replace `startup.cs` with the following code, putting your Client ID and Secret in the options properties.
 
 ```c#
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Twitter;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -153,10 +172,10 @@ namespace authenticationlab
                 {
                     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = GoggleDefaults.AuthenticationScheme;
                 })
                 .AddCookie()
-                .AddTwitter(options =>
+                .AddGoogle(options =>
                 {
                     options.ConsumerKey = "CONSUMER_KEY";
                     options.ConsumerSecret = "CONSUMER_SECRET";
@@ -165,6 +184,7 @@ namespace authenticationlab
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseHttpsRedirection();
             app.UseAuthentication();
             app.Run(async (context) =>
             {
@@ -179,7 +199,7 @@ namespace authenticationlab
 }
 ```
 
-* Run the code, authorize the application against your twitter account, and you should see "Hello *yourTwitterUserName*!"
+* Run the code, go through the google login screens, and you should see "Hello *yourGoogleUserName*!"
 * There is an XSS attack in the sample if the browser decided the page was HTML, so to address this, add the following before the `WriteAsync` call
 
 ```c#
@@ -192,8 +212,7 @@ Step 2: Authentication Events and Logging
 
 * Let's add some logging to see what's going on. 
 * Create a private class level variable of type `ILogger` called `_logger` inside the `Startup` class.
-* Add a constructor which takes a parameter of `ILoggerFactory` and creates and assigns a logger to `_logger` . 
-* *You will need to add a `using` reference to `Microsoft.Extensions.Logging` if your editor isn't doing that work for you.*
+* Add a constructor which takes a parameter of `ILoggerFactory` and creates and assigns a logger to `_logger` .  (You will need to add a `using` reference to `Microsoft.Extensions.Logging` if your editor isn't doing that work for you.)
 * This should look something like the following;
 
 ```c#
@@ -205,11 +224,11 @@ Step 2: Authentication Events and Logging
         }
 ```
 
-* Now let's look at the events on the Twitter authentication service.
-* Add some logging inside the events class
+* Now let's look at the events on the Google authentication service by adding some logging inside the events that authentication fires.
+* Events are part of the options class (you may need to add `using Microsoft.AspNetCore.Authentication.OAuth;` if your editor doesn't prompt you to do this).
 
 ```c#
-options.Events = new TwitterEvents()
+options.Events = new OAuthEvents()
 {
     OnRedirectToAuthorizationEndpoint = context =>
     {
@@ -236,7 +255,7 @@ options.Events = new TwitterEvents()
 
 * Make sure your authentication cookie is deleted (close your browser, or manually cull it) then browse to the web site again and watch the logging in the console.
 * Did you notice any difference? Why isn't your user name greeting you any more?
-* Some events need things returned. Look at the documentation for the events, or the [source](https://github.com/aspnet/Security/blob/dev/src/Microsoft.AspNetCore.Authentication.Twitter/Events/TwitterEvents.cs).
+* Some events need things returned. Look at the documentation for the events, or the [source](https://github.com/aspnet/Security/blob/master/src/Microsoft.AspNetCore.Authentication.OAuth/Events/OAuthEvents.cs).
 * Note that the `OnRedirectToAuthorizationEndpoint` default implementation calls the redirect - this isn't happening in your code any more, so add it back;
 
 ```c#
@@ -248,13 +267,12 @@ OnRedirectToAuthorizationEndpoint = context =>
 },
 ```
 
-* Now, take a look at the context properties inside `OnCreatingTicket()`. There's some useful stuff in there, like the Twitter access token. What if I want to save that?
-* Let's store the Twitter access token and secret in the identity we're creating from Twitter inside `OnCreatingTicket` as claims.
+* Now, take a look at the context properties inside `OnCreatingTicket()`. There's some useful stuff in there, like the Google access token. What if I want to save that?
+* Let's store the access token and refresh token google gives us in the identity we're creating inside `OnCreatingTicket` as claims.
 * First we need names for the claims, so define some `const` values in the `Startup` class like so
 
 ```c#
-private const string AccessTokenClaim = "urn:tokens:twitter:accesstoken";
-private const string AccessTokenSecret = "urn:tokens:twitter:accesstokensecret";
+private const string AccessTokenClaim = "urn:tokens:google:accesstoken";
 ```
 
 * Now inside the `OnCreatingTicket` event let's use these names to create some new claims, with the appropriate values
@@ -262,10 +280,9 @@ private const string AccessTokenSecret = "urn:tokens:twitter:accesstokensecret";
 ```c#
 OnCreatingTicket = context =>
 {
-    _logger.LogInformation("Creating tickets.");
     var identity = (ClaimsIdentity)context.Principal.Identity;
     identity.AddClaim(new Claim(AccessTokenClaim, context.AccessToken));
-    identity.AddClaim(new Claim(AccessTokenSecret, context.AccessTokenSecret));
+    _logger.LogInformation("Creating tickets.");
     return Task.CompletedTask;
 }
 ```
@@ -274,31 +291,24 @@ OnCreatingTicket = context =>
 
 ```c#
 var claimsIdentity = (ClaimsIdentity)context.User.Identity;
-var accessTokenClaim = 
-    claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
-var accessTokenSecretClaim = 
-    claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
+var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
 
-if (accessTokenClaim != null && accessTokenSecretClaim != null)
+if (accessTokenClaim != null)
 {
-    await context.Response.WriteAsync("Twitter access claims have persisted\r");
+    await context.Response.WriteAsync("Google access claims have persisted\r");
 }
 ```
 
 * Make sure your cookies have been cleared, run the application and browse to it.
 * How safe is this? Can you figure out from the cookie what the access token details are?
-* Let's do something interesting with these tokens, the [TweetinviAPI](https://github.com/linvi/tweetinvi) library provides a nice wrapper around the Twitter API. 
-* Open up your project file and add a project reference to it under the existing reference for `Microsoft.AspNet.Core.All`.
-
-```xml
-<PackageReference Include="TweetinviAPI" Version="2.1.0" />
-```
-
-* Remember if you're not using VS you will need to run `dotnet restore` at the command line.
-* Now let's use the TweetinviAPI library to grab the profile image for the authenticated user. 
-* Replace the `app.Run()` lambda with the following;
+* Let's do something interesting with what google sends us.
+* Go back to the [Google API dashboard](https://console.developers.google.com/apis/dashboard), make sure your project is selected and click "Credentials".
+* Pull down the Create Credentials drop down and choose API key. Copy the value you're given somewhere safe.
+* Replace the `app.Run()` lambda with the following, adding your API key in the appropriate place;
 
 ```c#
+app.UseHttpsRedirection();
+app.UseAuthentication();
 app.Run(async (context) =>
 {
     if (!context.User.Identity.IsAuthenticated)
@@ -310,40 +320,36 @@ app.Run(async (context) =>
     await context.Response.WriteAsync("<html><body>\r");
 
     var claimsIdentity = (ClaimsIdentity)context.User.Identity;
-    var accessTokenClaim = 
-        claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenClaim);
-    var accessTokenSecretClaim = 
-        claimsIdentity.Claims.FirstOrDefault(x => x.Type == AccessTokenSecret);
+    var nameIdentifier = claimsIdentity.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier).Value;
+    var googleApiKey = "**API KEY**";
 
-    if (accessTokenClaim != null && accessTokenSecretClaim != null)
+    if (!string.IsNullOrEmpty(nameIdentifier))
     {
-        var userCredentials = Tweetinvi.Auth.CreateCredentials(
-            "CONSUMER_KEY",
-            "CONSUMER_SECRET",
-            accessTokenClaim.Value,
-            accessTokenSecretClaim.Value);
-
-            var authenticatedUser = Tweetinvi.User.GetAuthenticatedUser(userCredentials);
-            if (authenticatedUser != null && 
-                !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
+        string jsonUrl = $"https://www.googleapis.com/plus/v1/people/{nameIdentifier}?fields=image&key={googleApiKey}";
+        using (var httpClient = new HttpClient())
+        {
+            var s = await httpClient.GetStringAsync(jsonUrl);
+            dynamic deserializeObject = JsonConvert.DeserializeObject(s);
+            var thumbnailUrl = (string)deserializeObject.image.url;
+            if (thumbnailUrl != null && !string.IsNullOrWhiteSpace(thumbnailUrl))
             {
                 await context.Response.WriteAsync(
-                    string.Format(
-                        "<img src=\"{0}\"></img>", 
-                        authenticatedUser.ProfileImageUrlHttps));
+                    string.Format($"<img src=\"{thumbnailUrl}\"></img>"));
             }
+        }
     }
-
     await context.Response.WriteAsync("</body></html>\r");
 });
-```
-* Rerun the application and look at how wonderful your Twitter profile image is.
+        }
+    }
+}```
+* Rerun the application and look at how wonderful your Google profile image is.
 
 Step 3: Schemes, Verbs
 ======================
 
 * How is this all hanging together? 
-  * Why does Twitter authentication need cookie authentication too? 
+  * Why does Google authentication need cookie authentication too? 
   * What's a scheme?
 
 * Remote authentication is just that. Remote. There is no persistence mechanism to allow it to be reused.
@@ -356,7 +362,7 @@ services
     {
         options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
         options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
     })
 ```
 * There are multiple `Default*` options on the `AuthenticationService` configuration;
@@ -403,7 +409,7 @@ Step 4: Configuring Cookie Authentication
 })
 ```
 * Why can't I set the expiration in the cookie builder in options? (The cookie authentication service has its own setting to support sliding expirations and also to embed the expiry in the cookie value itself. Why would it embed it in the value?)
-* After changing the cookie from a session cookie to a persistent one you'll now notice that you don't bounce through Twitter authentication again, cookie authentication is the single source of truth.
+* After changing the cookie from a session cookie to a persistent one you'll now notice that you don't bounce through Google authentication again, cookie authentication is the single source of truth.
 So what would happen if you populated a cookie from a database and the values change? For this we have the `OnValidatePrincipal` event.
 * Create a validator in your startup.cs
 ```c#
@@ -503,8 +509,8 @@ public Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
 * You can add a line into your `app.Run()` to see the claim; note that it updates on every run, it's not persisted into the cookie, it runs after the cookie has been written.
 
 
-Step 6: MVC and Tag Helpers
-===========================
+Step 6: MVC
+===========
 
 * So obviously putting your entire website logic inside the `app.Run()` lambda isn't really a sustainable development strategy, so let's add ASP.NET MVC to the mix.
 * First at the end of `ConfigureServices()` add a call to `services.AddMvc();`
@@ -521,6 +527,7 @@ public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         app.UseExceptionHandler("/Home/Error");
     }
 
+    app.UseHttpsRedirection();
     app.UseAuthentication();
 
     app.UseMvc(routes =>
@@ -564,19 +571,11 @@ namespace authenticationlab.Controllers
 </body>
 </html>
 ```
-* Finally edit your `csproj` file. (If you're using Visual Studio you can right click on the project in the solution folder and choose `Edit` from the context menu).
-* Change the `SDK` property on the `Project` element from `Microsoft.NET.Sdk` to `Microsoft.NET.Sdk.Web`.
-* In the `Views` folder create a `_ViewImports.cshtml` file and replace any contents with the following;
-
-```
-@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
-```
-
 * Finally clean your project by executing `dotnet clean` in the project directory, or by using Visual Studio's `Clean` context menu item on the project file.
 
 * *Note if you're using Visual Studio you will notice it now tries to be clever and hooks up IIS Express to host your application, 
 as well as assigning random ports. This can be controlled via the `launchsettings.json` file it created. 
-Change the `applicationURL` property in the authenticationLab profile to be `http://localhost:5000/` and delete the `IIS Express` profile.*
+Change the `applicationURL` property in the authenticationLab profile to be `"https://localhost:5001;http://localhost:5000"` and delete the `IIS Express` profile.*
 
 * Run your project and browse to the site and you should see `Hello World`.
 * Now, let's get back to where we were, first let's see who the current user is. Open up `Index.cshtml` and replace `Hello World` with `Hello @User.Identity.Name`. Build and run your application and browse to it. This time you will only see `Hello `. Why?
@@ -600,6 +599,23 @@ namespace authenticationlab.Controllers
 }
 ```
 
+* Then change the contents of `index.cshtml` to be
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ASP.NET MVC</title>
+    <meta charset="utf-8" />
+</head>
+<body>
+    <p>
+        Hello @User.Identity.Name
+    </p>
+</body>
+</html>
+```
+
 * Rebuild and rerun your application.
 * The addition of the `[Authorize]` attribute tells MVC that all requests to the action need to be authorized. 
 The default authorization rule is any authenticated user, 
@@ -616,7 +632,7 @@ if (!context.User.Identity.IsAuthenticated)
 so even if we got a user name which had `&lt;script&gt;` in it, it's going to end up as 
 `&amp;lt;script&amp;gt;` in the view output. 
 
-* If we wanted to get out pretty twitter profile picture back again we could go and grab it in the controller,
+* If we wanted to get out pretty google profile picture back again we could go and grab it in the controller,
 shove it in a model, and pass it into the view. So let's do that.
 * Create a `Models` folder in the root of your project and inside the folder create a new file, `IndexViewModel.cs`. Paste the following code into the file
 
@@ -637,37 +653,40 @@ Your controller code should look some this;
 
 ```c#
 using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using Newtonsoft.Json;
+
 namespace authenticationlab.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
-        [Authorize]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var model = new Models.IndexViewModel();
 
             var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var nameIdentifier = claimsIdentity.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier).Value;
+            var googleApiKey = "AIzaSyBZyzSW3_6G1DsvTtWF4PTSOy5ENcmvnMg";
 
-            var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == Startup.AccessTokenClaim);
-            var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == Startup.AccessTokenSecret);
-
-            if (accessTokenClaim != null && accessTokenSecretClaim != null)
+            if (!string.IsNullOrEmpty(nameIdentifier))
             {
-                var userCredentials = Tweetinvi.Auth.CreateCredentials(
-                    "CONSUMER_KEY",
-                    "CONSUMER_SECRET",
-                    accessTokenClaim.Value,
-                    accessTokenSecretClaim.Value);
-
-                var authenticatedUser = Tweetinvi.User.GetAuthenticatedUser(userCredentials);
-                if (authenticatedUser != null && !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
+                string jsonUrl = $"https://www.googleapis.com/plus/v1/people/{nameIdentifier}?fields=image&key={googleApiKey}";
+                using (var httpClient = new HttpClient())
                 {
-                    model.ProfilePictureUri = authenticatedUser.ProfileImageUrlHttps;
+                    var s = await httpClient.GetStringAsync(jsonUrl);
+                    dynamic deserializeObject = JsonConvert.DeserializeObject(s);
+                    var thumbnailUrl = (string)deserializeObject.image.url;
+                    if (thumbnailUrl != null && !string.IsNullOrWhiteSpace(thumbnailUrl))
+                    {
+                        model.ProfilePictureUri = thumbnailUrl;
+                    }
                 }
             }
 
@@ -676,8 +695,6 @@ namespace authenticationlab.Controllers
     }
 }
 ```
-* You'll also need to change the scope for the `AccessTokenClaim` and `AccessTokenSecret` 
-* constants in `startup.cs` from `private` to `public`, or you can cut and paste the strings.
 * Finally go to your view and change it to take in a model and use the contents within it;
 
 ```html
@@ -701,7 +718,7 @@ namespace authenticationlab.Controllers
 </body>
 </html>
 ```
-* Recompile your application, run it, and browse to it and there's your twitter profile picture back again.
+* Recompile your application, run it, and browse to it and there's your Google profile picture back again.
 
 Step 7: Writing your own authentication handler
 ===============================================
@@ -764,7 +781,7 @@ namespace authenticationlab
 }
 ```
 
-* Next take out all the calls to retrieve the twitter profile in your controller, 
+* Next take out all the calls to retrieve the google profile in your controller, 
 and reset it to just returning a view.
 
 ```c#

@@ -14,6 +14,8 @@ namespace authenticationlab
 
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
+            app.UseHttpsRedirection();
+
             app.Run(async (context) =>
             {
                 await context.Response.WriteAsync("Hello World!");

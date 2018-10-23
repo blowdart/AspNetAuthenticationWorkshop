@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.Twitter;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,8 +15,7 @@ namespace authenticationlab
 {
     public class Startup
     {
-        public const string AccessTokenClaim = "urn:tokens:twitter:accesstoken";
-        public const string AccessTokenSecret = "urn:tokens:twitter:accesstokensecret";
+        private const string AccessTokenClaim = "urn:tokens:google:accesstoken";
 
         private ILogger _logger;
 
@@ -47,7 +47,7 @@ namespace authenticationlab
                 {
                     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = TwitterDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
                 })
                 .AddCookie(options =>
                 {
@@ -58,11 +58,11 @@ namespace authenticationlab
                         OnValidatePrincipal = Startup.ValidateAsync
                     };
                 })
-                .AddTwitter(options =>
+                .AddGoogle(options =>
                 {
-                    options.ConsumerKey = "CONSUMER_KEY";
-                    options.ConsumerSecret = "CONSUMER_SECRET";
-                    options.Events = new TwitterEvents()
+                    options.ClientId = "** CLIENT ID **";
+                    options.ClientSecret = "** CLIENT SECRET **";
+                    options.Events = new OAuthEvents
                     {
                         OnRedirectToAuthorizationEndpoint = context =>
                         {
@@ -82,20 +82,16 @@ namespace authenticationlab
                         },
                         OnCreatingTicket = context =>
                         {
-                            _logger.LogInformation("Creating tickets.");
                             var identity = (ClaimsIdentity)context.Principal.Identity;
                             identity.AddClaim(new Claim(AccessTokenClaim, context.AccessToken));
-                            identity.AddClaim(new Claim(AccessTokenSecret, context.AccessTokenSecret));
+                            _logger.LogInformation("Creating tickets.");
                             return Task.CompletedTask;
                         }
                     };
                 });
 
             services.AddTransient<IClaimsTransformation, ClaimsTransformer>();
-
-            services.AddMvc();
         }
-
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
@@ -107,6 +103,7 @@ namespace authenticationlab
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            app.UseHttpsRedirection();
             app.UseAuthentication();
 
             app.UseMvc(routes =>

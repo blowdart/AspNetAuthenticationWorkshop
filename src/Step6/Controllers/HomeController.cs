@@ -1,35 +1,38 @@
 ﻿using System.Linq;
+using System.Net.Http;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using Newtonsoft.Json;
+
 namespace authenticationlab.Controllers
 {
+    [Authorize]
     public class HomeController : Controller
     {
-        [Authorize]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
             var model = new Models.IndexViewModel();
 
             var claimsIdentity = (ClaimsIdentity)User.Identity;
+            var nameIdentifier = claimsIdentity.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier).Value;
+            var googleApiKey = "** API KEY **";
 
-            var accessTokenClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == Startup.AccessTokenClaim);
-            var accessTokenSecretClaim = claimsIdentity.Claims.FirstOrDefault(x => x.Type == Startup.AccessTokenSecret);
-
-            if (accessTokenClaim != null && accessTokenSecretClaim != null)
+            if (!string.IsNullOrEmpty(nameIdentifier))
             {
-                var userCredentials = Tweetinvi.Auth.CreateCredentials(
-                    "CONSUMER_KEY",
-                    "CONSUMER_SECRET",
-                    accessTokenClaim.Value,
-                    accessTokenSecretClaim.Value);
-
-                var authenticatedUser = Tweetinvi.User.GetAuthenticatedUser(userCredentials);
-                if (authenticatedUser != null && !string.IsNullOrWhiteSpace(authenticatedUser.ProfileImageUrlHttps))
+                string jsonUrl = $"https://www.googleapis.com/plus/v1/people/{nameIdentifier}?fields=image&key={googleApiKey}";
+                using (var httpClient = new HttpClient())
                 {
-                    model.ProfilePictureUri = authenticatedUser.ProfileImageUrlHttps;
+                    var s = await httpClient.GetStringAsync(jsonUrl);
+                    dynamic deserializeObject = JsonConvert.DeserializeObject(s);
+                    var thumbnailUrl = (string)deserializeObject.image.url;
+                    if (thumbnailUrl != null && !string.IsNullOrWhiteSpace(thumbnailUrl))
+                    {
+                        model.ProfilePictureUri = thumbnailUrl;
+                    }
                 }
             }
 
