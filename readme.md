@@ -342,7 +342,9 @@ app.Run(async (context) =>
 });
         }
     }
-}```
+}
+```
+
 * Rerun the application and look at how wonderful your Google profile image is.
 
 Step 3: Schemes, Verbs
