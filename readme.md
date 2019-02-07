@@ -70,6 +70,7 @@ First let's add ASP.NET Core to the application.
 * Save the `csproj` file. If you're using Visual Studio or VS Code you may be prompted to restore packages, choose yes. If you're using the command line and an editor that makes you reconsider your life choices like VIM enter `dotnet restore` at the command line. No, I can't help you exit VIM.
 * Now switch your editor to the `program.cs` file. Change the contents of this file to be as follows
 
+```c#
 using System;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
