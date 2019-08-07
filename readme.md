@@ -178,8 +178,8 @@ namespace authenticationlab
                 .AddCookie()
                 .AddGoogle(options =>
                 {
-                    options.ConsumerKey = "CONSUMER_KEY";
-                    options.ConsumerSecret = "CONSUMER_SECRET";
+                    options.ClientId = "**CLIENT ID**";
+                    options.ClientSecret = "**CLIENT SECRET**";
                 });
         }
 
